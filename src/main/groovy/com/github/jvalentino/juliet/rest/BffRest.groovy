@@ -52,9 +52,61 @@ class BffRest {
     }
 
     @PostMapping('/custom-login')
+    @CircuitBreaker(name = 'CustomLogin')
     LoginDto login(@RequestBody UserDto user, HttpSession session) {
         LoginDto result = authService.login(user, authenticationManager, session)
         result
     }
+
+    /*
+    @PostMapping('/upload-file')
+    ResultDto upload(@RequestParam('file') MultipartFile file) {
+        AuthUser user = userService.currentLoggedInUser()
+        docService.uploadNewDoc(user, file, DateGenerator.date())
+
+        new ResultDto()
+    }
+
+    @GetMapping('/view-versions/{docId}')
+    ViewVersionDto index(@PathVariable(value='docId') Long docId) {
+        ViewVersionDto result = new ViewVersionDto()
+        result.with {
+            doc = docService.retrieveDocVersions(docId)
+        }
+
+        log.info("Doc ${docId} has ${result.doc.versions.size()} versions")
+
+        result
+    }
+
+    // https://www.baeldung.com/servlet-download-file
+    @GetMapping('/version/download/{docVersionId}')
+    void downloadVersion(@PathVariable(value='docVersionId') Long docVersionId, HttpServletResponse response) {
+        DocVersion version = docService.retrieveVersion(docVersionId)
+
+        response.setContentType(version.doc.mimeType)
+        response.setHeader('Content-disposition',
+                "attachment; filename=${version.doc.name.replaceAll(' ', '')}")
+
+        InputStream is = new ByteArrayInputStream(version.data)
+        OutputStream out = response.getOutputStream()
+
+        byte[] buffer = new byte[1048]
+
+        int numBytesRead
+        while ((numBytesRead = is.read(buffer)) > 0) {
+            out.write(buffer, 0, numBytesRead)
+        }
+    }
+
+    @PostMapping('/version/new/{docId}')
+    ResultDto upload(@RequestParam('file') MultipartFile file, @PathVariable(value='docId') Long docId) {
+        AuthUser user = userService.currentLoggedInUser()
+
+        docService.uploadNewVersion(user, file, DateGenerator.date(), docId)
+
+        new ResultDto()
+    }
+     */
 
 }

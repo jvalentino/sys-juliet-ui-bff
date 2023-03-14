@@ -39,6 +39,7 @@ class AuthService {
                     new UsernamePasswordAuthenticationToken(user.email, user.password))
             SecurityContextHolder.getContext().setAuthentication(authentication)
             String sessionId = session.getId()
+            log.info("${user.email} is logged in with session ID ${sessionId}")
             return new LoginDto(sessionId:sessionId, sessionIdBase64:sessionId.bytes.encodeBase64())
         } catch (e) {
             log.error("${user.email} gave invalid credentials", e)

@@ -21,10 +21,17 @@ class ApiGateway {
     @Value('${management.apiKeyUser}')
     String apiKeyUser
 
+    @Value('${management.apiDocUrl}')
+    String apiDocUrl
+
+    @Value('${management.apiUserUrl}')
+    String apiUserUrl
+
     @Bean
     DocRestApi docRestApi() {
         DocRestApi api = new DocRestApi()
         api.apiClient.apiKey = apiKeyDoc
+        api.apiClient.basePath = apiDocUrl
         api
     }
 
@@ -32,6 +39,7 @@ class ApiGateway {
     UserRestApi userRestApi() {
         UserRestApi api = new UserRestApi()
         api.apiClient.apiKey = apiKeyUser
+        api.apiClient.basePath = apiUserUrl
         api
     }
 

@@ -1,6 +1,8 @@
 management:
   apiKeyDoc: 123
+  apiDocUrl: http://localhost:8080
   apiKeyUser: 123
+  apiUserUrl: http://localhost:8081
   health:
     circuitbreakers:
       enabled: 'true'
@@ -58,4 +60,11 @@ resilience4j:
         failureRateThreshold: 50
         maxRetryAttempts: 3
         waitDuration: 5000
-
+      CustomLogin:
+        registerHealthIndicator: true
+        ringBufferSizeInClosedState: 5
+        ringBufferSizeInHalfOpenState: 3
+        waitDurationInOpenState: 10s
+        failureRateThreshold: 50
+        maxRetryAttempts: 3
+        waitDuration: 5000
