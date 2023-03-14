@@ -25,7 +25,7 @@ paths:
           content:
             '*/*':
               schema:
-                $ref: '#/components/schemas/ResultDto'
+                $ref: '#/components/schemas/AuthUser'
   /user/list:
     post:
       tags:
@@ -67,21 +67,6 @@ components:
           type: string
         password:
           type: string
-    ResultDto:
-      type: object
-      properties:
-        success:
-          type: boolean
-        message:
-          type: string
-    ListDto:
-      type: object
-      properties:
-        values:
-          type: array
-          items:
-            type: integer
-            format: int64
     AuthUser:
       type: object
       properties:
@@ -94,6 +79,14 @@ components:
           type: string
         lastName:
           type: string
+    ListDto:
+      type: object
+      properties:
+        values:
+          type: array
+          items:
+            type: integer
+            format: int64
     CountDto:
       type: object
       properties:
