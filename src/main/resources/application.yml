@@ -50,5 +50,12 @@ resilience4j:
         failureRateThreshold: 50
         maxRetryAttempts: 3
         waitDuration: 5000
-
+      Index:
+        registerHealthIndicator: true
+        ringBufferSizeInClosedState: 5
+        ringBufferSizeInHalfOpenState: 3
+        waitDurationInOpenState: 10s
+        failureRateThreshold: 50
+        maxRetryAttempts: 3
+        waitDuration: 5000
 

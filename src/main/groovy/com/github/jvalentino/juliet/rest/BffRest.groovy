@@ -1,6 +1,7 @@
 package com.github.jvalentino.juliet.rest
 
 import com.github.jvalentino.juliet.dto.DashboardDto
+import com.github.jvalentino.juliet.dto.HomeDto
 import com.github.jvalentino.juliet.service.BffService
 import groovy.transform.CompileDynamic
 import groovy.util.logging.Slf4j
@@ -19,6 +20,12 @@ class BffRest {
 
     @Autowired
     BffService bffService
+
+    @GetMapping('/')
+    @CircuitBreaker(name = 'Index')
+    HomeDto index() {
+        bffService.index()
+    }
 
     @GetMapping('/dashboard')
     @CircuitBreaker(name = 'Dashboard')
