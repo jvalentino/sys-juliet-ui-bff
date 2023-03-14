@@ -1,4 +1,6 @@
 management:
+  apiKeyDoc: 123
+  apiKeyUser: 123
   health:
     circuitbreakers:
       enabled: 'true'
@@ -40,7 +42,7 @@ server:
 resilience4j:
   circuitbreaker:
     instances:
-      Index:
+      Dashboard:
         registerHealthIndicator: true
         ringBufferSizeInClosedState: 5
         ringBufferSizeInHalfOpenState: 3

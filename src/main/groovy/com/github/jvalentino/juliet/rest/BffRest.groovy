@@ -1,10 +1,11 @@
 package com.github.jvalentino.juliet.rest
 
-import com.github.jvalentino.juliet.doc.api.DocRestApi
-import com.github.jvalentino.juliet.doc.model.DocListDto
+import com.github.jvalentino.juliet.dto.DashboardDto
+import com.github.jvalentino.juliet.service.BffService
 import groovy.transform.CompileDynamic
 import groovy.util.logging.Slf4j
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker
+import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RestController
 
@@ -16,12 +17,16 @@ import org.springframework.web.bind.annotation.RestController
 @RestController
 class BffRest {
 
-    @GetMapping('/')
-    @CircuitBreaker(name = 'Index')
-    DocListDto index() {
-        DocRestApi api = new DocRestApi()
-        api.apiClient.apiKey = '123'
-        DocListDto result = api.dashboard()
+    @Autowired
+    BffService bffService
+
+    @GetMapping('/dashboard')
+    @CircuitBreaker(name = 'Dashboard')
+    DashboardDto dashboard() {
+        DashboardDto result = new DashboardDto()
+        result.with {
+            documents = bffService.allDocs()
+        }
         result
     }
 

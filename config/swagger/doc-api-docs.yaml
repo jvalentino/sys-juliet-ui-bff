@@ -98,6 +98,18 @@ paths:
       responses:
         "200":
           description: OK
+  /doc/count:
+    get:
+      tags:
+        - doc-rest
+      operationId: countDocs
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/CountDto'
   /doc/all:
     get:
       tags:
@@ -221,6 +233,12 @@ components:
       properties:
         doc:
           $ref: '#/components/schemas/Doc'
+    CountDto:
+      type: object
+      properties:
+        value:
+          type: integer
+          format: int64
     DocListDto:
       type: object
       properties:
