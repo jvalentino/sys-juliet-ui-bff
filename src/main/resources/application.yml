@@ -68,3 +68,35 @@ resilience4j:
         failureRateThreshold: 50
         maxRetryAttempts: 3
         waitDuration: 5000
+      UploadFile:
+        registerHealthIndicator: true
+        ringBufferSizeInClosedState: 5
+        ringBufferSizeInHalfOpenState: 3
+        waitDurationInOpenState: 10s
+        failureRateThreshold: 50
+        maxRetryAttempts: 3
+        waitDuration: 5000
+      ViewVersions:
+        registerHealthIndicator: true
+        ringBufferSizeInClosedState: 5
+        ringBufferSizeInHalfOpenState: 3
+        waitDurationInOpenState: 10s
+        failureRateThreshold: 50
+        maxRetryAttempts: 3
+        waitDuration: 5000
+      DownloadVersion:
+        registerHealthIndicator: true
+        ringBufferSizeInClosedState: 5
+        ringBufferSizeInHalfOpenState: 3
+        waitDurationInOpenState: 10s
+        failureRateThreshold: 50
+        maxRetryAttempts: 3
+        waitDuration: 5000
+      UploadVersion:
+        registerHealthIndicator: true
+        ringBufferSizeInClosedState: 5
+        ringBufferSizeInHalfOpenState: 3
+        waitDurationInOpenState: 10s
+        failureRateThreshold: 50
+        maxRetryAttempts: 3
+        waitDuration: 5000

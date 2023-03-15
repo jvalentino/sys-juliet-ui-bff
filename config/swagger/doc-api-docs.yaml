@@ -98,6 +98,10 @@ paths:
       responses:
         "200":
           description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/DocDto'
   /doc/count:
     get:
       tags:
@@ -129,11 +133,10 @@ components:
       properties:
         fileName:
           type: string
-        bytes:
-          type: array
-          items:
-            type: string
-            format: byte
+        base64:
+          type: string
+        mimeType:
+          type: string
     ResultDto:
       type: object
       properties:
