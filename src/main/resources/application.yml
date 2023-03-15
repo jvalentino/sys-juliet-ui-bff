@@ -18,6 +18,12 @@ management:
 spring:
   application:
     name: sys-juliet-ui-bff
+  redis:
+    host: localhost
+    port: 6379
+    password: redis
+  session:
+    store-type: redis
   servlet:
     multipart:
       max-file-size: 100MB

@@ -1,14 +1,12 @@
+
 version: '3.8'
 services:
-  db:
-    container_name: juliet-db
-    image: postgres:14.1-alpine
+  redis:
+    container_name: juliet-redis
+    image: redis:6.2-alpine
     restart: always
-    environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=examplesys
     ports:
-      - '5432:5432'
+      - '6379:6379'
+    command: redis-server --save 20 1 --loglevel warning --requirepass redis
     volumes:
-      - ./dev-db:/var/lib/postgresql/data
+      - ./dev-redis:/data
