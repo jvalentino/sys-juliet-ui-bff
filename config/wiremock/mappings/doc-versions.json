@@ -1,0 +1,13 @@
+{
+  "request": {
+    "urlPathPattern": "/doc/versions/([a-z1-9]*)",
+    "method": "GET"
+  },
+  "response": {
+    "status": 200,
+    "body": "{\"doc\":{\"docId\":1,\"name\":\"sample.pdf\",\"mimeType\":\"application/pdf\",\"createdByUser\":null,\"updatedByUser\":null,\"createdDateTime\":\"2023-03-15T17:53:49.104+0000\",\"updatedDateTime\":\"2023-03-15T18:07:44.408+0000\",\"versions\":[{\"docVersionId\":1,\"versionNum\":1,\"doc\":null,\"data\":null,\"createdDateTime\":\"2023-03-15T17:53:49.104+0000\",\"createdByUser\":null},{\"docVersionId\":2,\"versionNum\":2,\"doc\":null,\"data\":null,\"createdDateTime\":\"2023-03-15T18:05:12.140+0000\",\"createdByUser\":null},{\"docVersionId\":3,\"versionNum\":3,\"doc\":null,\"data\":null,\"createdDateTime\":\"2023-03-15T18:07:44.408+0000\",\"createdByUser\":null}],\"tasks\":null}}",
+    "headers": {
+      "Content-Type": "application/json"
+    }
+  }
+}

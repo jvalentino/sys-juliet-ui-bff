@@ -1,0 +1,13 @@
+{
+  "request": {
+    "url": "/doc/all",
+    "method": "GET"
+  },
+  "response": {
+    "status": 200,
+    "body": "{\"documents\":[{\"docId\":1,\"name\":\"sample.pdf\",\"mimeType\":\"application/pdf\",\"createdByUser\":{\"authUserId\":1,\"email\":\"admin\",\"firstName\":\"admin\",\"lastName\":\"admin\"},\"updatedByUser\":{\"authUserId\":1,\"email\":\"admin\",\"firstName\":\"admin\",\"lastName\":\"admin\"},\"createdDateTime\":\"2023-03-15T17:53:49.104+0000\",\"updatedDateTime\":\"2023-03-15T18:07:44.408+0000\",\"versions\":null,\"tasks\":null}]}",
+    "headers": {
+      "Content-Type": "application/json"
+    }
+  }
+}
