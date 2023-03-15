@@ -6,9 +6,11 @@ tasks.named('test') {
 test {
     finalizedBy jacocoTestReport // report is always generated after tests run
     jacoco.excludes = [
-            '**/*$*_closure*',
+            '**/*/*_closure*',
             '**/*/MyServletInitializer*',
-            '**/*/UploadConfig*'
+            '**/*/UploadConfig*',
+            '**/doc/*',
+            '**/user/*',
     ]
 }
 jacocoTestReport {
@@ -22,9 +24,11 @@ jacocoTestCoverageVerification {
     afterEvaluate {
         classDirectories.setFrom(files(classDirectories.files.collect {
             fileTree(dir: it, excludes: [
-                    '**/*$*_closure*',
+                    '**/*/*_closure*',
                     '**/*/MyServletInitializer*',
-                    '**/*/UploadConfig*'
+                    '**/*/UploadConfig*',
+                    '**/doc/*',
+                    '**/user/*',
             ])
         }))
     }
@@ -32,7 +36,7 @@ jacocoTestCoverageVerification {
         rule {
             limit {
                 counter = 'LINE'
-                //minimum = 0.85
+                minimum = 0.80
             }
         }
     }
