@@ -1,6 +1,6 @@
-# System Juliet REST Doc
+# System Juliet UI BFF
 
-This application serves as the restful services as part of the overall https://github.com/jvalentino/sys-juliet project as they relate to documents. For system level details, please see that location.
+This application serves as the BFF for the UI as part of the overall https://github.com/jvalentino/sys-juliet project as they relate to documents. For system level details, please see that location.
 
 Prerequisites
 
@@ -8,23 +8,40 @@ Prerequisites
 - IntelliJ
 - Docker
 - Docker Compose
-- pgadmin
 - Git
 - Minikube
 - Helm
+- Redis
+- Redis Desktop
 
 All of these you can get in one command using this installation automation (if you are on a Mac): https://github.com/jvalentino/setup-automation
 
 # Contents
 
 - [Summary](#summary)
-  * [Database](#database)
+  * [Redis & Wiremock](#redis--wiremock)
   * [IDE Testing](#ide-testing)
   * [Runtime](#runtime)
   * [Verification](#verification)
   * [Strategy](#strategy)
   * [Build](#build)
+  * [Deploy](#deploy)
+  * [Build & Deploy](#build--deploy)
 - [Dev](#dev)
+  * [Runtime Validation](#runtime-validation)
+    + [Runtime Validation (Live)](#runtime-validation-live)
+      - [**IDE**](#ide)
+      - [Swagger UI](#swagger-ui)
+      - [/](#)
+      - [/custom-login](#custom-login)
+      - [/dashboard (Auth Required)](#dashboard-auth-required)
+      - [/view-versions/{docId} (Auth Required)](#view-versionsdocid-auth-required)
+      - [/version/download/{docVersionId} (Auth Required)](#versiondownloaddocversionid-auth-required)
+      - [/upload-file (Auth Required)](#upload-file-auth-required)
+      - [/version/new/{docId} (Auth Required)](#versionnewdocid-auth-required)
+    + [Runtime Validation (Mocked)](#runtime-validation-mocked)
+      - [IDE](#ide)
+      - [**Command-Line**](#command-line)
   * [Prometheus](#prometheus)
     + [build.gradle](#buildgradle)
     + [application.properties](#applicationproperties)
@@ -40,27 +57,54 @@ All of these you can get in one command using this installation automation (if y
     + [SpringWebConfig](#springwebconfig-1)
     + [application.properties](#applicationproperties-1)
     + [UI](#ui)
+    + [WebSecurityConfig](#websecurityconfig-1)
   * [Resilience4j](#resilience4j)
     + [build.gradle](#buildgradle-2)
-    + [DocRest (Controller)](#docrest-controller)
+    + [Controllers](#controllers)
     + [application.yml](#applicationyml)
     + [/actuator/health](#actuatorhealth)
   * [API Key Security](#api-key-security)
     + [SwaggerConfiguration](#swaggerconfiguration)
-    + [SecurityFilter](#securityfilter)
-    + [application.properties](#applicationproperties-2)
+  * [Spring Security](#spring-security)
+    + [WebSecurityConfig](#websecurityconfig-2)
+    + [application.yml](#applicationyml-1)
+    + [build.gradle](#buildgradle-3)
+    + [BffRest](#bffrest)
+    + [AuthService](#authservice)
+    + [MyCORSFilter](#mycorsfilter)
+  * [Swagger Code Generation](#swagger-code-generation)
+    + [config/swagger/doc-api-docs.yaml](#configswaggerdoc-api-docsyaml)
+    + [Config/swagger/doc-config.json](#configswaggerdoc-configjson)
+    + [config/swagger/user-api-docs.yaml](#configswaggeruser-api-docsyaml)
+    + [config/swagger/user-config.json](#configswaggeruser-configjson)
+    + [build.gradle](#buildgradle-4)
+    + [config/gradle/swagger.gradle](#configgradleswaggergradle)
 
 # Summary
 
-## Database
+## Redis & Wiremock
 
-You launch the database container by running:
+You launch the Redis and Wiremock container by running:
 
 ```
 docker compose up -d
 ```
 
 This sill executes the container in detached mode, and leave it running in the background.
+
+You can verify that Redis is running using the Redis desktop manager using port 6379 and password "redis":
+
+![01](wiki/redis.png)
+
+You can verify that wiremock is running by hitting http://localhost:8888/api/test
+
+```json
+{
+ 	"test":"data"
+}
+```
+
+
 
 ## IDE Testing
 
@@ -116,73 +160,132 @@ The following deploys the docker image to Kubernetes via Helm:
 ./deploy.sh
 ```
 
-If it worked you can access it via http://localhost:8080/swagger-ui/index.html
+If it worked you can access it via http://localhost:8082/swagger-ui/index.html
+
+## Build & Deploy
+
+If you just want to rebuild and deploy everything, run:
+
+```bash
+./build-and-deploy.sh
+```
+
+
 
 # Dev
 
 ## Runtime Validation
 
-The first step is to refresh the database to the expected default state:
+Consider that there are two ways to run this application:
 
-```bash
-./gradlew refreshDb
-```
+- Live - Requires that the rest-doc application be running at http://localhost:8080, and the rest-user application be running at http://localhost:8081
+- Wiremock - Replaces the usage of http://localhost:8080 and http://localhost:8081 wire the wiremock instance at http://localhost:8888
 
-You need to specifically do this so you set the default admin account to username/password: `admin/37e098f0-b78d-4a48-adf1-e6c2568d4ea1`.
+### Runtime Validation (Live)
 
-It is then recommended you run thus application on port 8080, which can be done in two ways:
+It is then recommended you run thus application on port 8082, which can be done in two ways:
 
-**IDE**
+#### **IDE**
 
 ![01](./wiki/ide-1.png)
 
 **Command-Line**
 
 ```bash
-java -jar --server.port=8080 build/libs/sys-juliet-rest-doc-0.0.1.jar
+java -jar --server.port=8082 build/libs/sys-juliet-ui-bff-0.0.1.jar
 ```
 
-### Swagger UI
+#### Swagger UI
 
-The Swagger UI can then be accessed via http://localhost:8080/swagger-ui/index.html
+The Swagger UI can then be accessed via http://localhost:8082/swagger-ui/index.html
 
 ![01](./wiki/swagger-1.png)
 
-You are then going to want to set the authorization code to `123`, otherwise access will be defined. That is our default/testing API Key.
+This RESTful services represent exactly the original endpoints from the previous single backend called https://github.com/jvalentino/sys-golf-rest
 
-![01](wiki/authorize.png)
+Consider that / and /custom-login are the only unprotected endpoints, and the rest of the endpoints require you to be logged in. The following will explain how to login and then set the appropriate authorization headers.
 
-![01](wiki/xauth.png)
+#### /
 
-### /doc/versions/{docId}
+The purpose of this service is to return the root payload, which is just a count of users and documents:
 
-Used for listing the versions of a specific document.
+![01](./wiki/swagger-2.png)
 
-![01](wiki/swagger-2.png)
+#### /custom-login
 
-### /doc/version/download/{docVersionId}
+This is the way in which you login, which results in a session ID:
 
-Used for downloading a specific document version.
+![01](./wiki/swagger-3.png)
 
-![01](wiki/swagger-3.png)
+The input payload will always be this:
 
-### /doc/all
+```json
+{
+  "email": "admin",
+  "password": "37e098f0-b78d-4a48-adf1-e6c2568d4ea1"
+}
+```
 
-User for listing al documents.
+...and the result will contain the Session ID, which becomes the `X-Auth-Token`:
 
-![01](wiki/swagger-4.png)
+```json
+{
+  "success": true,
+  "message": null,
+  "sessionId": "61df0dc2-ce6f-42e9-9db3-6aa9112524bc",
+  "sessionIdBase64": "NjFkZjBkYzItY2U2Zi00MmU5LTlkYjMtNmFhOTExMjUyNGJj"
+}
+```
 
-### /doc/upload/user/{userId}
+In this case the Session ID is `61df0dc2-ce6f-42e9-9db3-6aa9112524bc`, which you then put into the `Authorize` button:
 
-Used for uploading a new document, where that given document becomes the first version of it. The input is a file name and then a byte array: src/test/resources/doc-dto.json
+![01](./wiki/authorize.png)
 
-![01](wiki/swagger-5.png)
+![01](./wiki/swagger-4.png)
 
-### /doc/version/new/{docId}/user/{userId}
+#### /dashboard (Auth Required)
 
-This uploads a new version to an existing document. The input is a file name and then a byte array: src/test/resources/doc-dto.json
+![01](./wiki/swagger-5.png)
 
-![01](wiki/swagger-6.png)
+#### /view-versions/{docId} (Auth Required)
+
+![01](./wiki/swagger-6.png)
+
+#### /version/download/{docVersionId} (Auth Required)
+
+![01](./wiki/swagger-7.png)
+
+#### /upload-file (Auth Required)
+
+![01](./wiki/swagger-8.png)
+
+This won't work, because the input is actually a multi-part encoded file, and Swagger is not picking that up. The only way to validate this is to use the UI for the moment.
+
+#### /version/new/{docId} (Auth Required)
+
+![01](./wiki/swagger-9.png)
+
+This won't work, because the input is actually a multi-part encoded file, and Swagger is not picking that up. The only way to validate this is to use the UI for the moment.
+
+### Runtime Validation (Mocked)
+
+This variant of the runtime environment replaces the two RESTful backing applications with our wiremock instance, where every endpoint has been replaced with defaulted responses. 
+
+#### IDE
+
+It is then recommended you run thus application on port 8082, which can be done in two ways:
+
+![01](./wiki/ide-2.png)
+
+#### **Command-Line**
+
+```bash
+java -jar \
+	--server.port=8082 \
+	--management.apiDocUrl=http://localhost:8888 \
+  --management.apiUserUrl=http://localhost:8888 \
+	build/libs/sys-juliet-ui-bff-0.0.1.jar
+```
 
 
 
@@ -223,6 +326,43 @@ management.endpoints.web.exposure.include=health, metrics, prometheus
     }
 ```
 
+### WebSecurityConfig
+
+```groovy
+@Configuration
+@EnableWebSecurity
+@Slf4j
+@CompileDynamic
+class WebSecurityConfig extends WebSecurityConfigurerAdapter {
+
+   //...
+
+    @Override
+    protected void configure(HttpSecurity http) throws Exception {
+        // https://stackoverflow.com/questions/32064000/uploading-file-returns-403-error-spring-mvc
+        http.cors().and().csrf().disable()
+
+        http
+                .authorizeRequests()
+                .antMatchers(
+                        '/resources/**',
+                        '/webjars/**',
+                        '/',
+                        '/custom-login',
+                        '/invalid',
+                        '/actuator/prometheus',
+                        '/actuator/health',
+                        '/v3/**',
+                        '/swagger-ui/**',
+                ).permitAll()
+                .anyRequest().authenticated()
+    }
+
+}
+```
+
+
+
 ## Docker
 
 ### build-docker.sh
@@ -238,9 +378,9 @@ This script consists of the following:
 ```bash
 #!/bin/bash
 
-NAME=sys-juliet-rest-doc
+NAME=sys-juliet-ui-bff
 VERSION=latest
-HELM_NAME=backend
+HELM_NAME=sys-ui-bff
 
 helm delete $HELM_NAME || true
 minikube image rm $NAME:$VERSION
@@ -261,7 +401,7 @@ The container for running this application consists of two parts:
 ```docker
 FROM openjdk:11
 WORKDIR .
-COPY build/libs/sys-juliet-rest-doc-0.0.1.jar /usr/local/sys-juliet-rest-doc-0.0.1.jar
+COPY build/libs/sys-juliet-ui-bff-0.0.1.jar /usr/local/sys-juliet-ui-bff-0.0.1.jar
 EXPOSE 8080
 COPY config/docker/start.sh /usr/local/start.sh
 
@@ -286,7 +426,7 @@ ENTRYPOINT ["/usr/local/start.sh"]
     Match *
     Host elasticsearch-master
     Port 9200
-    Index sys-rest-doc
+    Index sys-ui-bff
     Suppress_Type_Name On
 ```
 
@@ -302,7 +442,12 @@ cd /opt/fluent-bit/bin
 ./fluent-bit -c fluentbit.conf > fluentbit.log 2>&1 &
 
 cd /usr/local
-java -jar -Dspring.datasource.url=jdbc:postgresql://pg-primary-postgresql:5432/examplesys sys-juliet-rest-doc-0.0.1.jar
+java -jar \
+  -Dspring.redis.host=redis-master \
+  -Dmanagement.apiDocUrl=http://sys-rest-doc:8080 \
+  -Dmanagement.apiUserUrl=http://sys-rest-user:8080 \
+  sys-juliet-ui-bff-0.0.1.jar
+
 ```
 
 ## OpenAPI
@@ -378,6 +523,43 @@ The result of all this magic is that you can now get to http://localhost:8080/sw
 
 ![01](wiki/swagger.png)
 
+### WebSecurityConfig
+
+```groovy
+@Configuration
+@EnableWebSecurity
+@Slf4j
+@CompileDynamic
+class WebSecurityConfig extends WebSecurityConfigurerAdapter {
+
+    // ...
+  
+    @Override
+    protected void configure(HttpSecurity http) throws Exception {
+        // https://stackoverflow.com/questions/32064000/uploading-file-returns-403-error-spring-mvc
+        http.cors().and().csrf().disable()
+
+        http
+                .authorizeRequests()
+                .antMatchers(
+                        '/resources/**',
+                        '/webjars/**',
+                        '/',
+                        '/custom-login',
+                        '/invalid',
+                        '/actuator/prometheus',
+                        '/actuator/health',
+                        '/v3/**',
+                        '/swagger-ui/**',
+                ).permitAll()
+                .anyRequest().authenticated()
+    }
+
+}
+```
+
+
+
 ## Resilience4j
 
 > Resilience4j is a lightweight fault tolerance library designed for functional programming. Resilience4j provides higher-order functions (decorators) to enhance any functional interface, lambda expression or method reference with a Circuit Breaker, Rate Limiter, Retry or Bulkhead. You can stack more than one decorator on any functional interface, lambda expression or method reference. The advantage is that you have the choice to select the decorators you need and nothing else.
@@ -391,7 +573,7 @@ The result of all this magic is that you can now get to http://localhost:8080/sw
 	implementation group: 'io.github.resilience4j', name: 'resilience4j-spring-boot2', version: '1.7.0'
 ```
 
-### DocRest (Controller)
+### Controllers
 
 ```groovy
 @GetMapping('/doc/all')
@@ -624,63 +806,696 @@ First we have to tell Swagger to put an "Authorize" button in its user interface
 
 ![01](wiki/xauth.png)
 
-### SecurityFilter
+## Spring Security
+
+Spring Security is being used in conjunction with Redis based session management.
+
+### WebSecurityConfig
 
 ```groovy
-@Service
-@Configurable
-@CompileDynamic
+@Configuration
+@EnableWebSecurity
 @Slf4j
-@SuppressWarnings(['UnnecessaryGetter'])
-class SecurityFilter extends GenericFilterBean {
+@CompileDynamic
+class WebSecurityConfig extends WebSecurityConfigurerAdapter {
 
-    @Value('${management.apikey}')
-    String apikey
+    @Autowired
+    AuthService authService
 
-    @Value('${management.securePath}')
-    String securePath
+    // https://stackoverflow.com/questions/4664893/
+    // //how-to-manually-set-an-authenticated-user-in-spring-security-springmvc
+    @Bean
+    AuthenticationManager customAuthenticationManager() throws Exception {
+        new AuthenticationManager() {
 
-    void doFilter(
-            ServletRequest request,
-            ServletResponse response,
-            FilterChain chain) throws IOException, ServletException {
-        // pull the token out of the header
-        HttpServletRequest httpRequest = (HttpServletRequest) request
-        String token = httpRequest.getHeader('x-auth-token')
-        String pathInfo = httpRequest.getRequestURI()
+            @Override
+            Authentication authenticate(Authentication authentication) throws AuthenticationException {
+                authService.authenticate(authentication)
+            }
 
-        if (!pathInfo.startsWith(securePath)) {
-            log.info("${pathInfo} is not secured")
-            chain.doFilter(request, response)
-            return
         }
+    }
 
-        if (token != apikey) {
-            HttpServletResponse res = (HttpServletResponse) response
-            res.status = 401
-            return
-        }
+    @Bean
+    HttpSessionIdResolver httpSessionIdResolver() {
+        HeaderHttpSessionIdResolver.xAuthToken()
+    }
 
-        chain.doFilter(request, response)
+    @Override
+    protected void configure(HttpSecurity http) throws Exception {
+        // https://stackoverflow.com/questions/32064000/uploading-file-returns-403-error-spring-mvc
+        http.cors().and().csrf().disable()
+
+        http
+                .authorizeRequests()
+                .antMatchers(
+                        '/resources/**',
+                        '/webjars/**',
+                        '/',
+                        '/custom-login',
+                        '/invalid',
+                        '/actuator/prometheus',
+                        '/actuator/health',
+                        '/v3/**',
+                        '/swagger-ui/**',
+                ).permitAll()
+                .anyRequest().authenticated()
     }
 
 }
 ```
 
-Next we have to add an interceptor that gets called prior to every request. 
+This is where you both have to define the endpoints that are not secured, in combination with defining how you want to do authorization. 
 
-- If that request is not /doc related, we ignore security
-- If that request is /doc related, we verify that it matches the expected key
-
-### application.properties
+### application.yml
 
 ```yaml
 spring:
-  application:
-    name: sys-juliet-rest-doc
-management:
-  apikey: 123
-  securePath: /doc
+  redis:
+    host: localhost
+    port: 6379
+    password: redis
+  session:
+    store-type: redis
 ```
 
-The involved properties were put in the application.properties, so that we can also change them at runtime from a deployment perspective.
+This is saying to use Redis for session management.
+
+### build.gradle
+
+```groovy
+// Security (Login)
+	implementation 'org.springframework.boot:spring-boot-starter-security'
+	implementation group: 'org.springframework.session', name: 'spring-session-core', version: '2.7.0'
+
+	// Redis
+	implementation 'org.springframework.session:spring-session-data-redis'
+	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+```
+
+### BffRest
+
+```groovy
+@CompileDynamic
+@Slf4j
+@RestController
+@SuppressWarnings(['UnnecessarySetter', 'UnnecessaryGetter'])
+class BffRest {
+
+  @PostMapping('/custom-login')
+    @CircuitBreaker(name = 'CustomLogin')
+    LoginDto login(@RequestBody UserDto user, HttpSession session) {
+        LoginDto result = authService.login(user, authenticationManager, session)
+        result
+    }
+```
+
+We define the login endpoint, which delegates to your serivce.
+
+### AuthService
+
+```groovy
+@Slf4j
+@CompileDynamic
+@Service
+@SuppressWarnings(['UnnecessaryGetter', 'UnnecessarySetter'])
+class AuthService {
+
+    AuthService instance = this
+
+    @Autowired
+    UserRestApi userRestApi
+
+    ResultDto login(UserDto user, AuthenticationManager authenticationManager, HttpSession session) {
+        log.info('Attempting to login the user user by email of ' + user.email)
+
+        try {
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(user.email, user.password))
+            SecurityContextHolder.getContext().setAuthentication(authentication)
+            String sessionId = session.getId()
+            log.info("${user.email} is logged in with session ID ${sessionId}")
+            return new LoginDto(sessionId:sessionId, sessionIdBase64:sessionId.bytes.encodeBase64())
+        } catch (e) {
+            log.error("${user.email} gave invalid credentials", e)
+        }
+
+        new LoginDto(success:false, message:'Invalid Credentials')
+    }
+
+    @SuppressWarnings(['ThrowException'])
+    Authentication authenticate(Authentication authentication) {
+        UsernamePasswordAuthenticationToken auth = authentication
+
+        String authUserId = instance.retrieveCurrentlyLoggedInUserId()
+        log.info("Authenticating ${authUserId}...")
+
+        // if they have not logged in, do so
+        if (authUserId == 'anonymousUser' || authUserId == null) {
+            log.info('Not logged in to we have to first login...')
+            AuthUser user = instance.isValidUser(auth.getPrincipal(), auth.getCredentials())
+            if (user != null) {
+                return new UsernamePasswordAuthenticationToken(user.authUserId, auth.getCredentials())
+            }
+
+            throw new Exception('Invalid username and/or password')
+        }
+
+        // they are already logged in
+        log.info("${authUserId} is already logged in")
+        authentication
+    }
+
+    AuthUser isValidUser(String email, String password) {
+        try {
+            AuthUser user = userRestApi.login(new UserDto(email:email, password:password))
+            return user
+        } catch (e) {
+            log.error('Unable to login', e)
+        }
+
+        null
+    }
+
+    String retrieveCurrentlyLoggedInUserId() {
+        SecurityContextHolder.getContext().getAuthentication()?.getPrincipal()
+    }
+
+    Long retrieveCurrentlyLoggedInUserIdAsLong() {
+        this.retrieveCurrentlyLoggedInUserId().toLong()
+    }
+
+}
+```
+
+This is tied in with both the login endpoint, and is referenced by the custom authentication manager.
+
+### MyCORSFilter
+
+```groovy
+@Component
+@Order(Ordered.HIGHEST_PRECEDENCE)
+@CompileDynamic
+@SuppressWarnings(['UnnecessaryObjectReferences'])
+class MyCORSFilter implements Filter {
+
+    @Override
+    void doFilter(ServletRequest req, ServletResponse res, FilterChain chain) throws IOException, ServletException {
+        HttpServletRequest request = (HttpServletRequest) req
+        HttpServletResponse response = (HttpServletResponse) res
+
+        response.setHeader('Access-Control-Allow-Origin', request.getHeader('Origin'))
+        response.setHeader('Access-Control-Allow-Credentials', 'true')
+        response.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS, DELETE, PUT')
+        response.setHeader('Access-Control-Max-Age', '3600')
+        response.setHeader('Access-Control-Allow-Headers',
+                'Content-Type, Accept, X-Requested-With, x-auth-token, X-Auth-Token, Set-Cookie, Cookie')
+        response.setHeader('Access-Control-Expose-Headers', 'X-Auth-Token, Set-Cookie, Cookie')
+
+        chain.doFilter(req, res)
+    }
+
+    @Override
+    void init(FilterConfig filterConfig) {
+    }
+
+    @Override
+    void destroy() {
+    }
+
+}
+```
+
+This is needed to allow the services to be reached from a different host.
+
+## Swagger Code Generation
+
+This application makes use of two external APIs:
+
+- Doc Services: http://localhost:8080/v3/api-docs.yaml
+- User Services: http://localhost:8082/v3/api-docs.yaml
+
+### config/swagger/doc-api-docs.yaml
+
+This is a download of all the content from http://localhost:8080/v3/api-docs.yaml, and represents the auto-generated API by Swagger in that application.
+
+```yaml
+openapi: 3.0.1
+info:
+  title: sys-juliet-rest-doc
+  version: 1.0.0
+servers:
+  - url: http://localhost:8080
+    description: Generated server url
+security:
+  - X-Auth-Token: []
+paths:
+  /doc/version/new/{docId}/user/{userId}:
+    post:
+      tags:
+        - doc-rest
+      operationId: upload
+      parameters:
+        - name: docId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DocDto'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ResultDto'
+  /doc/upload/user/{userId}:
+    post:
+      tags:
+        - doc-rest
+      operationId: upload_1
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DocDto'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ResultDto'
+  /doc/versions/{docId}:
+    get:
+      tags:
+        - doc-rest
+      operationId: versions
+      parameters:
+        - name: docId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ViewVersionDto'
+  /doc/version/download/{docVersionId}:
+    get:
+      tags:
+        - doc-rest
+      operationId: downloadVersion
+      parameters:
+        - name: docVersionId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/DocDto'
+  /doc/count:
+    get:
+      tags:
+        - doc-rest
+      operationId: countDocs
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/CountDto'
+  /doc/all:
+    get:
+      tags:
+        - doc-rest
+      operationId: dashboard
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/DocListDto'
+components:
+  schemas:
+    DocDto:
+      type: object
+      properties:
+        fileName:
+          type: string
+        base64:
+          type: string
+        mimeType:
+          type: string
+    ResultDto:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+    AuthUser:
+      type: object
+      properties:
+        authUserId:
+          type: integer
+          format: int64
+        email:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
+    Doc:
+      type: object
+      properties:
+        docId:
+          type: integer
+          format: int64
+        name:
+          type: string
+        mimeType:
+          type: string
+        createdByUser:
+          $ref: '#/components/schemas/AuthUser'
+        updatedByUser:
+          $ref: '#/components/schemas/AuthUser'
+        createdDateTime:
+          type: string
+          format: date-time
+        updatedDateTime:
+          type: string
+          format: date-time
+        versions:
+          uniqueItems: true
+          type: array
+          items:
+            $ref: '#/components/schemas/DocVersion'
+        tasks:
+          uniqueItems: true
+          type: array
+          items:
+            $ref: '#/components/schemas/DocTask'
+    DocTask:
+      type: object
+      properties:
+        docTaskId:
+          type: integer
+          format: int64
+        doc:
+          $ref: '#/components/schemas/Doc'
+        name:
+          type: string
+        status:
+          type: string
+        content:
+          type: string
+        createdByUser:
+          $ref: '#/components/schemas/AuthUser'
+        updatedByUser:
+          $ref: '#/components/schemas/AuthUser'
+        createdDateTime:
+          type: string
+          format: date-time
+        updatedDateTime:
+          type: string
+          format: date-time
+    DocVersion:
+      type: object
+      properties:
+        docVersionId:
+          type: integer
+          format: int64
+        versionNum:
+          type: integer
+          format: int64
+        doc:
+          $ref: '#/components/schemas/Doc'
+        data:
+          type: array
+          items:
+            type: string
+            format: byte
+        createdDateTime:
+          type: string
+          format: date-time
+        createdByUser:
+          $ref: '#/components/schemas/AuthUser'
+    ViewVersionDto:
+      type: object
+      properties:
+        doc:
+          $ref: '#/components/schemas/Doc'
+    CountDto:
+      type: object
+      properties:
+        value:
+          type: integer
+          format: int64
+    DocListDto:
+      type: object
+      properties:
+        documents:
+          type: array
+          items:
+            $ref: '#/components/schemas/Doc'
+  securitySchemes:
+    X-Auth-Token:
+      type: apiKey
+      name: X-Auth-Token
+      in: header
+
+```
+
+### Config/swagger/doc-config.json
+
+```json
+{
+  "library": "okhttp-gson",
+  "modelPackage": "com.github.jvalentino.juliet.doc.model",
+  "apiPackage": "com.github.jvalentino.juliet.doc.api",
+  "invokerPackage": "com.github.jvalentino.juliet.doc"
+}
+```
+
+This is a swagger code generation configuration that tells us the library and package structure to use when generating out code for for the Doc REST API.
+
+### config/swagger/user-api-docs.yaml
+
+```yaml
+openapi: 3.0.1
+info:
+  title: sys-juliet-rest-user
+  version: 1.0.0
+servers:
+  - url: http://localhost:8081
+    description: Generated server url
+security:
+  - X-Auth-Token: []
+paths:
+  /user/login:
+    post:
+      tags:
+        - user-rest
+      operationId: login
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserDto'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/AuthUser'
+  /user/list:
+    post:
+      tags:
+        - user-rest
+      operationId: listUsers
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ListDto'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AuthUser'
+  /user/count:
+    get:
+      tags:
+        - user-rest
+      operationId: performCount
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/CountDto'
+components:
+  schemas:
+    UserDto:
+      type: object
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+    AuthUser:
+      type: object
+      properties:
+        authUserId:
+          type: integer
+          format: int64
+        email:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
+    ListDto:
+      type: object
+      properties:
+        values:
+          type: array
+          items:
+            type: integer
+            format: int64
+    CountDto:
+      type: object
+      properties:
+        value:
+          type: integer
+          format: int64
+  securitySchemes:
+    X-Auth-Token:
+      type: apiKey
+      name: X-Auth-Token
+      in: header
+
+```
+
+This is a download of all the content from http://localhost:8081/v3/api-docs.yaml, and represents the auto-generated API by Swagger in that application.
+
+### config/swagger/user-config.json
+
+```json
+{
+  "library": "okhttp-gson",
+  "modelPackage": "com.github.jvalentino.juliet.user.model",
+  "apiPackage": "com.github.jvalentino.juliet.user.api",
+  "invokerPackage": "com.github.jvalentino.juliet.user"
+}
+```
+
+This is a swagger code generation configuration that tells us the library and package structure to use when generating out code for for the User REST API.
+
+### build.gradle
+
+```groovy
+plugins {
+	// Swagger!
+	id 'org.hidetake.swagger.generator' version '2.19.2'
+}
+
+apply from: 'config/gradle/swagger.gradle'
+
+// ...
+dependencies {
+  // Swagger!
+	swaggerCodegen 'org.openapitools:openapi-generator-cli:3.3.4'
+	implementation 'io.swagger:swagger-annotations:1.5.17'
+	implementation 'com.squareup.okhttp:okhttp:2.7.5'
+	implementation 'com.squareup.okhttp:logging-interceptor:2.7.5'
+	implementation 'com.google.code.gson:gson:2.8.1'
+	implementation 'io.gsonfire:gson-fire:1.8.0'
+	implementation group: 'org.apache.oltu.oauth2', name: 'org.apache.oltu.oauth2.client', version: '1.0.1'
+	implementation 'org.threeten:threetenbp:1.3.5'
+}
+
+```
+
+This uses the Swagger gradle plugin, and then has to include additionally libraries that are needed for the generated code to work.
+
+### config/gradle/swagger.gradle
+
+```groovy
+// Swagger!
+swaggerSources {
+    doc {
+        inputFile = file('config/swagger/doc-api-docs.yaml')
+        code {
+            language = 'java'
+            configFile = file('config/swagger/doc-config.json')
+        }
+    }
+    user {
+        inputFile = file('config/swagger/user-api-docs.yaml')
+        code {
+            language = 'java'
+            configFile = file('config/swagger/user-config.json')
+        }
+    }
+}
+
+// Configure compile task dependency and source
+compileJava.dependsOn swaggerSources.doc.code
+sourceSets.main.java.srcDir "${swaggerSources.doc.code.outputDir}/src/main/java"
+sourceSets.main.resources.srcDir "${swaggerSources.doc.code.outputDir}/src/main/resources"
+
+compileJava.dependsOn swaggerSources.user.code
+sourceSets.main.java.srcDir "${swaggerSources.user.code.outputDir}/src/main/java"
+sourceSets.main.resources.srcDir "${swaggerSources.user.code.outputDir}/src/main/resources"
+```
+
+This is the magic that ties it all together:
+
+- It uses the YAML files for each api
+- It associated each YAML file with its JSON configuration
+- It makes the generated code a part of the classpath
+
+You can then run code generation by itself using `./gradlew generateSwaggerCode`, but any build operation will run this automatically.
+
