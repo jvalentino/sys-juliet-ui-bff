@@ -1,8 +1,8 @@
 #!/bin/bash
 
-NAME=sys-juliet-rest-doc
+NAME=sys-juliet-ui-bff
 VERSION=latest
-HELM_NAME=sys-rest-doc
+HELM_NAME=sys-ui-bff
 
 helm delete $HELM_NAME || true
 minikube image rm $NAME:$VERSION

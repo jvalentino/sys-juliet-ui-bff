@@ -1,0 +1,13 @@
+{
+  "request": {
+    "url": "/user/login",
+    "method": "POST"
+  },
+  "response": {
+    "status": 200,
+    "body": "{\"authUserId\":1,\"email\":\"admin\",\"firstName\":\"admin\",\"lastName\":\"admin\"}",
+    "headers": {
+      "Content-Type": "application/json"
+    }
+  }
+}
